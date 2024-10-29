@@ -3,6 +3,7 @@ package main
 import (
 	"backend/internal/repository"
 	"backend/internal/repository/dbrepo"
+	"database/sql"
 	"flag"
 	"fmt"
 	"log"
@@ -13,7 +14,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const port = 8080
+//const port = 8080
 
 type application struct {
 	DSN          string
@@ -29,7 +30,10 @@ type application struct {
 func main() {
 	// set application config
 	var app application
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		return
+	}
 	host := os.Getenv("POSTGRES_HOST")
 	port := os.Getenv("POSTGRES_PORT")
 	user := os.Getenv("POSTGRES_USERNAME")
@@ -37,7 +41,7 @@ func main() {
 	dbname := os.Getenv("POSTGRES_DBNAME")
 
 	// read from command line
-	configPostgres := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s"+
+	configPostgres := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s "+
 		"sslmode=disable timezone=UTC connect_timeout=5", host, port, user, password, dbname)
 
 	flag.StringVar(&app.DSN, "dsn", configPostgres, "Postgres connection string")
@@ -55,7 +59,9 @@ func main() {
 		log.Fatal(err)
 	}
 	app.DB = &dbrepo.PostgresDBRepo{DB: conn}
-	defer app.DB.Connection().Close()
+	defer func(connection *sql.DB) {
+		_ = connection.Close()
+	}(app.DB.Connection())
 	app.auth = Auth{
 		Issuer:        app.JWTIssuer,
 		Audience:      app.JWTAudience,
