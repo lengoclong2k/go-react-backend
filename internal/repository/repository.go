@@ -16,4 +16,7 @@ type DatabaseRepo interface {
 
 	//Genres
 	AllGenres() ([]*models.Genre, error)
+
+	InsertMovie(movie models.Movie) (int, error)
+	UpdateMovieGenres(id int, genreIDs []int) error
 }
