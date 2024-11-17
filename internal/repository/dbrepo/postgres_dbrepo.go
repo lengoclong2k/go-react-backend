@@ -4,6 +4,7 @@ import (
 	"backend/internal/models"
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -16,21 +17,26 @@ const dbTimeout = time.Second * 3
 func (m *PostgresDBRepo) Connection() *sql.DB {
 	return m.DB
 }
-func (m *PostgresDBRepo) AllMovies() ([]*models.Movie, error) {
+func (m *PostgresDBRepo) AllMovies(genre ...int) ([]*models.Movie, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 
 	defer cancel()
 
-	query := `
+	where := ""
+	if len(genre) > 0 {
+		where = fmt.Sprintf("where id in (select movie_id from movies_genres where genre_id = %d", genre[0])
+	}
+
+	query := fmt.Sprintf(`
 		select 
 			id,title,release_date, runtime,
 			mpaa_rating, description, coalesce(image,''),
 			created_at,updated_at
 		from
-			movies
+			movies %s
 		order by
 			title
-	`
+	`, where)
 
 	rows, err := m.DB.QueryContext(ctx, query)
 
@@ -312,7 +318,27 @@ func (m *PostgresDBRepo) InsertMovie(movie models.Movie) (int, error) {
 
 	return newID, err
 }
+func (m *PostgresDBRepo) UpdateMovie(movie models.Movie) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+	stmt := `update movies set title =$1, description = $2,release_date = $3,
+                  runtime = $4,mpaa_rating = $5,
+                  updated_at = $6, image = $7 where id = $8`
+	_, err := m.DB.ExecContext(ctx, stmt,
+		movie.Title,
+		movie.Description,
+		movie.ReleaseDate,
+		movie.Runtime,
+		movie.MPAARating,
+		movie.UpdateAt,
+		movie.Image,
+		movie.ID)
 
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func (m *PostgresDBRepo) UpdateMovieGenres(id int, genreIDs []int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -329,6 +355,19 @@ func (m *PostgresDBRepo) UpdateMovieGenres(id int, genreIDs []int) error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (m *PostgresDBRepo) DeletedMovie(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	stmt := `delete from movies where id = $1`
+
+	_, err := m.DB.ExecContext(ctx, stmt, id)
+	if err != nil {
+		return err
 	}
 	return nil
 }

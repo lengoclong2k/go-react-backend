@@ -8,6 +8,7 @@ require (
 	github.com/go-pg/pg/v10 v10.13.0 // indirect
 	github.com/go-pg/zerochecker v0.2.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/graphql-go/graphql v0.8.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
